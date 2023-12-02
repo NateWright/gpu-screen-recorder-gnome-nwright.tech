@@ -1,0 +1,9 @@
+{
+  "name": "GPU Screen Recorder Gnome",
+  "description": "Activate GPU Screen recorder and save replays",
+  "uuid": "gpu-screen-recorder-gnome@nwright.tech",
+  "shell-version": [
+    "45"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.gpu-screen-recorder-gnome"
+}

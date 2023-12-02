@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+    <schema id="org.gnome.shell.extensions.gpu-screen-recorder-gnome" path="/org/gnome/shell/extensions/gpu-screen-recorder-gnome/">
+        <key name="save-replay-hotkey" type="as">
+            <default><![CDATA[['<Shift><Super>F10']]]></default>
+            <summary>Hotkey to save replay.</summary>
+        </key>
+
+    </schema>
+</schemalist>
