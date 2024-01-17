@@ -22,43 +22,46 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import Gvc from 'gi://Gvc';
 
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
-        _init() {
+        _init(dir_path) {
             super._init(0.5, _('GPU Screen Recorder'));
 
-            this.add_child(new St.Icon({
-                icon_name: 'face-smile-symbolic',
+            this.icon_recording_stopped = Gio.icon_new_for_string(dir_path + '/icon-recording-stopped.svg');
+            this.icon_recording = Gio.icon_new_for_string(dir_path + '/icon-recording.svg');
+            this.icon = new St.Icon({
+                gicon: this.icon_recording_stopped,
                 style_class: 'system-status-icon',
-            }));
+            })
+            this.add_child(this.icon);
+
+            this._mixerControl = Volume.getMixerControl();
 
             let item = new PopupMenu.PopupMenuItem(_('Save Replay'));
             let enable = new PopupMenu.PopupSwitchMenuItem(_('Enable'), false);
             enable.connect('toggled', (item) => {
                 if (item.state) {
-                    GLib.spawn_command_line_sync('killall gpu-screen-recorder');
-                    const getSinkProc = Gio.Subprocess.new(['pactl', 'get-default-sink'], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-                    getSinkProc.communicate_utf8_async(null, null, (proc1, res1) => {
-                        let [, stdout, stderr] = getSinkProc.communicate_utf8_finish(res1);
-                        const getSourceProc = Gio.Subprocess.new(['pactl', 'get-default-source'], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-                        getSourceProc.communicate_utf8_async(null, null, (proc2, res2) => {
-                            let [, stdout2, stderr2] = getSourceProc.communicate_utf8_finish(res2);
-                            console.log(stdout.trim() + '|' + stdout2.trim());
-                            const prog = Gio.Subprocess.new(
-                                ['gpu-screen-recorder', '-w', 'focused', '-s', '2560x1440', '-f', '60', '-r', '60', '-c', 'mp4', '-a', stdout.trim() + '.monitor|' + stdout2.trim(), '-o', '/home/nwright/Videos/Replay', '-v', 'no'],
-                                null);
-                        });
-                    });
+                    let defaultSink = this._mixerControl.get_default_sink().get_name();
+                    let defaultSource = this._mixerControl.get_default_source().get_name();
+                    let homePath = GLib.get_home_dir();
+                    console.log(homePath)
+                    const prog = Gio.Subprocess.new(
+                        ['gpu-screen-recorder', '-w', 'focused', '-s', '2560x1440', '-f', '60', '-r', '60', '-c', 'mp4', '-a', defaultSink + '.monitor|' + defaultSource, '-o', homePath + '/Videos/Replay', '-v', 'no'],
+                        null);
+                    this.icon.gicon = this.icon_recording;
                 } else {
                     try {
                         GLib.spawn_command_line_sync('killall gpu-screen-recorder');
+                        this.icon.gicon = this.icon_recording_stopped;
                     } catch (error) {
                     }
 
@@ -87,7 +90,7 @@ export default class IndicatorExampleExtension extends Extension {
             Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
             this._saveReplay.bind(this));
-        this._indicator = new Indicator();
+        this._indicator = new Indicator(this.path);
         Main.panel.addToStatusArea(this._uuid, this._indicator);
     }
 
